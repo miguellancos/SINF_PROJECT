@@ -1,0 +1,76 @@
+-------------Tabela Motes--------------
+CREATE TABLE Motes
+  (Mote_ID SERIAL PRIMARY KEY,
+  Marca VARCHAR(50), 
+  Modelo VARCHAR(50));
+  
+-------------Tabela Divisoes------------ 
+CREATE TABLE Divisoes 
+  (Nome VARCHAR(50) PRIMARY KEY,
+  Mote INTEGER REFERENCES Motes(Mote_ID) NOT NULL, 
+  Dimensao INTEGER, 
+  Tipo VARCHAR(10) CONSTRAINT tipo_quartos CHECK (Tipo IN('Comum','Privado')));
+  
+------------Tabela Atuadores------------
+CREATE TABLE Atuadores 
+  (Nome VARCHAR(50) PRIMARY KEY, 
+  Divisao VARCHAR(50) REFERENCES Divisoes(Nome) NOT NULL, 
+  Tipo VARCHAR(50) DEFAULT 'Lampada' CONSTRAINT tipo_atuadores CHECK (Tipo IN ('Lampada')), 
+  Valor INTEGER NOT NULL DEFAULT '0' CONSTRAINT intensidade CHECK (Valor >= 0 AND Valor <= 100), 
+  Hora TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP);
+
+-------------Tabela Regras--------------
+CREATE TABLE Regras 
+  (Regra_ID SERIAL PRIMARY KEY, 
+  Divisao VARCHAR(50) REFERENCES Divisoes(Nome) NOT NULL, 
+  Regra VARCHAR(500) NOT NULL);
+  
+-------------Tabela Sensores------------
+CREATE TABLE Sensores 
+  (Nome VARCHAR(50) PRIMARY KEY, 
+   Divisao VARCHAR(50) REFERENCES Divisoes(Nome) NOT NULL, 
+   Tipo VARCHAR(50) CONSTRAINT tipo_sensores CHECK (Tipo IN('Luminusidade','Movimento','Automacao')));
+   
+   
+--------------Tabela Leituras------------
+CREATE TABLE Leituras 
+  (Leitura_ID SERIAL PRIMARY KEY, 
+  Sensor VARCHAR(50) REFERENCES Sensores(Nome) NOT NULL, 
+  Hora TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, 
+  Valor INTEGER NOT NULL CONSTRAINT valor_sensores CHECK (Valor >= 0 AND Valor <= 100));
+  
+---------------Tabela Historico_Sensor---------------------
+CREATE TABLE Historico_Sensor
+	(Id SERIAL PRIMARY KEY,
+	Nome VARCHAR(20) NOT NULL,
+	Divisao VARCHAR(20) REFERENCES Divisoes(Nome),
+	Divisao_nova VARCHAR(20) REFERENCES Divisoes(Nome),
+	Hora_inicio TIMESTAMP NOT NULL,
+	Hora_fim TIMESTAMP);
+  
+---------------FUNCAO SENSOR_CHANGES--------------------------
+CREATE OR REPLACE FUNCTION sensor_changes() RETURNS trigger AS
+	$BODY$
+	BEGIN
+		IF (TG_OP = 'INSERT') THEN
+			INSERT INTO Historico_Sensor(Nome, Divisao, Divisao_nova, Hora_inicio, Hora_fim) VALUES (NEW.Nome, NEW.Divisao, NULL, CURRENT_TIMESTAMP, NULL);
+		ELSIF (TG_OP = 'DELETE') THEN
+			UPDATE Historico_Sensor SET Hora_fim = CURRENT_TIMESTAMP WHERE Nome = OLD.Nome AND Hora_fim IS NULL;
+		ELSE
+			IF NEW.divisao <> OLD.divisao THEN
+				UPDATE Historico_Sensor SET Divisao_nova = NEW.divisao, Hora_fim = CURRENT_TIMESTAMP WHERE Nome = NEW.Nome AND Hora_fim IS NULL;
+				INSERT INTO Historico_Sensor(Nome, Divisao, Divisao_nova, Hora_inicio, Hora_fim) VALUES (NEW.Nome, New.Divisao, NULL, CURRENT_TIMESTAMP, NULL);
+			END IF;
+		END IF;
+	 RETURN NEW;
+	END;
+	$BODY$
+	LANGUAGE plpgsql;
+  
+-----------------------TRIGGER CHANGES------------------------
+CREATE TRIGGER changes 
+  AFTER INSERT OR DELETE OR UPDATE 
+  ON sensores 
+  FOR EACH ROW 
+  EXECUTE PROCEDURE sensor_changes();
+

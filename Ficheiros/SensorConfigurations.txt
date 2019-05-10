@@ -1,0 +1,5 @@
+Quarto1:Lum4,Mov4:Luz4
+Quarto2:Lum5,Mov5:Luz5
+Sala:Lum1,Mov1:Luz1
+Cozinha:Lum2,Mov2:Luz2
+Entrada:Lum3,Mov3:Luz3

@@ -1,0 +1,6 @@
+Motes (~~Mote_ID~~, Marca, Modelo);
+Divisoes (~~Nome~~,#Mote -> Motes(Mote_ID), Dimensao, Tipo);
+Atuadores (~~Nome~~, #Divisao -> Divisoes(Nome) [NN], Tipo, Valor, Hora);
+Regras (~~Regra_ID~~, #Divisao -> Divisoes(Nome) [NN], Regra [NN]);
+Sensores (~~Nome~~, #Divisao -> Divisoes(Nome), Tipo);
+Leituras (~~Leitura_ID~~, #Sensor -> Sensores(Nome), Hora [NN], Valor [NN]);
